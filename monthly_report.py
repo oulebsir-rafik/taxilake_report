@@ -17,95 +17,99 @@ sys.path.append('./graphics/')
 from plots import daily_avg_bar, month_sum_donut, top10_zone, map_zone_gains
 
 
-#------------------------ Importing the data ----------------------------
-# import the earnings data
-gains = pd.read_csv("gains.csv")
-# Set filepath
-shp_path = "./data/taxi_zones.shp"
+# create a function to compute the big numbers of the report
+def big_num(gains_month):
+    """ This function takes dataframe of earnings of one month and return the big number of datapane report"""
 
-# Read file using gpd.read_file()
-nyc_gjson = gpd.read_file(shp_path)
-#-------------------------------------------------------------------------
-
-#----------------------- Processing shape file data ----------------------
-# drop some columns
-nyc_gjson.drop(["OBJECTID", "Shape_Leng", "Shape_Area"], axis=1, inplace = True)
-# create the full name of the zone
-nyc_gjson["zone_full_name"] = nyc_gjson["borough"] + " - " + nyc_gjson["zone"]
-# copy  locationId column to pulocationid columns to change the name
-nyc_gjson["pulocationid"] = nyc_gjson["LocationID"]
-# drop the uncessary columns
-nyc_gjson.drop(["LocationID", "zone", "borough"], axis=1, inplace=True)
-#---------------------------------------------------------------------------
-
-#----------------------  Processing earnings csv file-------------------------
-
-# select january data
-gains_jan = gains[gains["month"] == 2]
-gains_jan.drop(["year", "month"], axis=1, inplace = True)
-# initialize some essential values 
-com_name = {"HV0003": "Uber",
-            "HV0004": "Via",
-            "HV0005": "Lyft"}
-
-# select the company 
-company = "HV0005" # Uber
-
-# filter dataframe with the company name
-comp_gains = gains_jan[gains_jan["hvfhs_license_num"] == company]
-
-# create dataframe of all driver pay
-zone_gains = comp_gains[["pulocationid", "driver_pay"]]
-zone_gains = zone_gains.groupby(["pulocationid"]).sum()
-zone_gains = zone_gains.reset_index()
-
-# merge the zone_gains dataframe with nyc_gjson dataframe
-zone_gains = pd.merge(zone_gains, nyc_gjson, on=["pulocationid"])
-
-#-----------------------------------------------------------------------------
+    # ----------------------------------- creating the big Numbers ---------------------------------------
+    # initialize some essential values
+    com_name = {"HV0003": "Uber",
+                "HV0004": "Via",
+                "HV0005": "Lyft"}
 
 
-# ----------------------------------- creating the big Numbers ---------------------------------------
+    # create a dict to add values of the big numbers
+    total_pay_sum = dict()
 
-# create a dict to add values of the big numbers
-total_pay_sum = dict()
-
-# append the values of each company
-for key in com_name.keys():
-  total_pay_sum[com_name[key]] = gains_jan[gains_jan["hvfhs_license_num"] == key]["driver_pay"].sum()
+    # append the values of each company
+    for key in com_name.keys():
+        total_pay_sum[com_name[key]] = gains_month[gains_month["hvfhs_license_num"] == key]["driver_pay"].sum()
 
 
-# create the big number in datapane
-com_head = [key for key in total_pay_sum.keys()]
-bigN = dp.Group(
-        dp.BigNumber(
-            heading= com_head[0] + " total driver pay",
-            value= numerize.numerize(total_pay_sum[com_head[0]]) + " $",
-        ),
-         dp.BigNumber(
-            heading= com_head[1] + " total driver pay",
-            value= numerize.numerize(total_pay_sum[com_head[1]]) + " $",
-        ),
-         dp.BigNumber(
-            heading= com_head[2] + " total driver pay",
-            value= numerize.numerize(total_pay_sum[com_head[2]]) + " $",
-        ),
-        columns=3,
-    )
+    # create the big number in datapane
+    com_head = [key for key in total_pay_sum.keys()]
+    bigN = dp.Group(
+            dp.BigNumber(
+                heading= com_head[0] + " total driver pay",
+                value= numerize.numerize(total_pay_sum[com_head[0]]) + " $",
+            ),
+            dp.BigNumber(
+                heading= com_head[1] + " total driver pay",
+                value= numerize.numerize(total_pay_sum[com_head[1]]) + " $",
+            ),
+            dp.BigNumber(
+                heading= com_head[2] + " total driver pay",
+                value= numerize.numerize(total_pay_sum[com_head[2]]) + " $",
+            ),
+            columns=3,
+        )
 
+    return bigN
 #-------------------------------------------------------------------------------------------------
 
-# create the plots
-daily_avg_plot = daily_avg_bar(comp_gains)
-month_sum_plot = month_sum_donut(comp_gains)
-top_zone = top10_zone(zone_gains)
-map_zone = map_zone_gains(zone_gains)
 
 
-head_title = """<center> <img src="./images/headline.png" alt="alt text" title="xplore logo" style="display:inline"> </center>"""
+
+# function that will create a report for a certain company
+def company_report(comp_gains, nyc_gjson, company_name):
+    """ This function takes a earnings dataframe and dataframe of shape file and 
+    return a list of modules to create a report using datapane"""
+
+    # create dataframe of all driver pay
+    zone_gains = comp_gains[["pulocationid", "driver_pay"]]
+    zone_gains = zone_gains.groupby(["pulocationid"]).sum()
+    zone_gains = zone_gains.reset_index()
+
+    # merge the zone_gains dataframe with nyc_gjson dataframe
+    zone_gains = pd.merge(zone_gains, nyc_gjson, on=["pulocationid"])
+
+    # create the plots
+    daily_avg_plot = daily_avg_bar(comp_gains)
+    month_sum_plot = month_sum_donut(comp_gains)
+    top_zone = top10_zone(zone_gains)
+    map_zone = map_zone_gains(zone_gains)
+
+    return dp.Group(dp.Plot(map_zone),
+            dp.Group(dp.Plot(daily_avg_plot),dp.Plot(month_sum_plot),columns = 2),
+            dp.Plot(top_zone), label = company_name +  " dataset")
 
 
-data_desc = """## Data Description 
+# ---------------------   Creation of the report -----------------------------------
+
+def earning_report(gains_month, nyc_gjson, month_name, year):
+    """ this function takes two dataframes and create a complete report using multiple function 
+    created in this python script"""
+
+    # initialize the list of dataframes
+    list_comp_gains = {}
+
+    for company_code, company_name in zip(["HV0003", "HV0004", "HV0005"], ["Uber", "Via", "Lyft"]):
+        # filter dataframe with the company name
+        list_comp_gains[company_name] = gains_month[gains_month["hvfhs_license_num"] == company_code]
+
+    # create the big numbers datapane component
+    bigN = big_num(gains_month)
+
+    # create the different pages of the finale report
+    uber_page = company_report(list_comp_gains["Uber"], nyc_gjson, "Uber")
+    lyft_page = company_report(list_comp_gains["Lyft"], nyc_gjson, "Lyft")
+    via_page = company_report(list_comp_gains["Via"], nyc_gjson, "Via")
+
+    # the html code for the head title
+    head_title = """<center> <img src="https://github.com/oulebsir-rafik/taxilake_report/blob/main/images/headline.PNG?raw=true" alt="alt text" title="xplore logo" style="display:inline"> </center>"""
+
+    # markdown of the data description
+    data_desc = """## Data Description 
 - **base_passenger_fare**  : base passenger fare before tolls, tips, taxes, and fees.
 - **tolls** : the total amount of all tolls paid in trip.
 - **bcf** : the total amount collected in trip for Black Car Fund.
@@ -116,19 +120,15 @@ data_desc = """## Data Description
 - **driver_pay** : the total driver pay (not including tolls or tips and net of commission, surcharges, or taxes).
 """
 
-# add the different plot to datapane report 
-app = dp.App(dp.Text(head_title),
-            dp.Text("<center><h1>🚕 January Taxi report </h1></center>"),
-            bigN,
-             dp.Plot(map_zone),
-             dp.Group(
-                 dp.Plot(daily_avg_plot),
-                 dp.Plot(month_sum_plot),
-                 columns = 2),
-            dp.Plot(top_zone),
-            dp.Text(data_desc)
-)
+    # add the different plot to datapane report 
+    app = dp.App(dp.Text(head_title),
+                dp.Text("<center><h1>🚕 Taxi report - {month} {year} </h1></center>".format(month = month_name, year = str(year))),
+                bigN,
+                dp.Select(blocks=[uber_page,via_page, lyft_page]),
+                dp.Text(data_desc)
+        )
 
-# save the report to an html file
-app.upload(name="My example report")
-#app.save("Report Jan.html")
+    # save the report to an html file
+    app.save("./reports/Report_{month}_{year}.html".format(month = month_name, year = str(year)))
+
+
