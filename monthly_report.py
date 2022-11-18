@@ -102,17 +102,33 @@ top_zone = top10_zone(zone_gains)
 map_zone = map_zone_gains(zone_gains)
 
 
+head_title = """<center> <img src="./images/headline.png" alt="alt text" title="xplore logo" style="display:inline"> </center>"""
+
+
+data_desc = """## Data Description 
+- **base_passenger_fare**  : base passenger fare before tolls, tips, taxes, and fees.
+- **tolls** : the total amount of all tolls paid in trip.
+- **bcf** : the total amount collected in trip for Black Car Fund.
+- **sales_tax** : the total amount collected in a trip for NYS sales tax.
+- **congestion_surcharge** : the total amount collected in a trip for NYS congestion surcharge.
+- **airport_fee** : $2.50 for both drop off and pick up at LaGuardia, Newark, and John F. Kennedy airports.
+- **tips** : the total amount of tips received from the passenger.
+- **driver_pay** : the total driver pay (not including tolls or tips and net of commission, surcharges, or taxes).
+"""
 
 # add the different plot to datapane report 
-app = dp.App(dp.Text("<center><h1>🚕 January Taxi report </h1></center>"),
+app = dp.App(dp.Text(head_title),
+            dp.Text("<center><h1>🚕 January Taxi report </h1></center>"),
             bigN,
              dp.Plot(map_zone),
              dp.Group(
                  dp.Plot(daily_avg_plot),
                  dp.Plot(month_sum_plot),
                  columns = 2),
-            dp.Plot(top_zone)
+            dp.Plot(top_zone),
+            dp.Text(data_desc)
 )
 
 # save the report to an html file
-app.save("Report Jan.html")
+app.upload(name="My example report")
+#app.save("Report Jan.html")
