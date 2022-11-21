@@ -11,7 +11,7 @@ from monthly_report import earning_report
 
 #------------------------ Importing the data ----------------------------
 # import the earnings data
-gains = pd.read_csv("gains.csv")
+gains = pd.read_csv("./data/gains.csv")
 # Set filepath
 shp_path = "./data/taxi_zones.shp"
 
@@ -64,13 +64,13 @@ if generate:
     
     html_file = open('./reports/Report_{month}_{year}.html'.format(month = month_sel, year = str(year_sel)), 'rb')
     html_string = html_file.read()
+    
+    st.markdown("<center><h2>Preview of the report</h2></center>", unsafe_allow_html=True)
 
     btn = st.download_button(
             label="Download the html file",
             data=html_file,
             file_name="taxi_report.html"
           )
-    
-    st.markdown("## Preview of the file")
     #embed streamlit docs in a streamlit app
-    components.html(html_string ,width= 1000, height = 1000, scrolling=True)
+    components.html(html_string ,width= 1200, height = 800, scrolling=True)
