@@ -10,10 +10,13 @@ The dataset used in this streamlit app is an aggregated data of **The high volum
 ## How to use
 
 In order to use this app, you need to clone the repo:
+
 ``git clone https://github.com/oulebsir-rafik/taxilake_report``
 
 install th necessary libraries :
+
 ``pip install -r requirements.txt``
 
 run the streamlit app:
+
 ``streamlit run main.py ``
